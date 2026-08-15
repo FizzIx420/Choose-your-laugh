@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "The Haunted Hallway of Doom"
+description = "A funny spooky choose-your-own-adventure novel where readers navigate a cursed school, make absurd choices, collect consequences, and discover multiple endings across a sprawling 300-page story world."
+version = "1.0.0"
+id = "artifacts/goosebumps-comedy-cyoa"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22205
+
+[services.development]
+run = "pnpm --filter @workspace/goosebumps-comedy-cyoa run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/goosebumps-comedy-cyoa", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/goosebumps-comedy-cyoa/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22205"
+BASE_PATH = "/"
