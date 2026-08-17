@@ -1,0 +1,1 @@
+- [Offline mobile companion](offline-mobile-companion.md) — Android mirrors the story locally so the core game never depends on a network or backend.
