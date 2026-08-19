@@ -21,8 +21,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # ============================================================
-      # 1. Checkout
+      # 1. Checkout repository
       # ============================================================
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,74 +50,57 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       # ============================================================
-      # 4. Setup Java
+      # 4. Verify Node + pnpm
       # ============================================================
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
-
-      # ============================================================
-      # 5. Verify toolchain
-      # ============================================================
-      - name: Verify toolchain
+      - name: Verify Node and pnpm
         run: |
-          echo "Node:"
+          echo "Node version:"
           node --version
 
-          echo "pnpm:"
+          echo "pnpm version:"
           pnpm --version
 
-          echo "Java:"
-          java -version
-
       # ============================================================
-      # 6. FIRST PASS:
-      #    Regenerate pnpm-lock.yaml if package.json changed.
+      # 5. Synchronize pnpm lockfile
       #
-      #    This intentionally uses --no-frozen-lockfile.
-      #    It is ONLY for synchronizing the lockfile.
+      # This is allowed to update pnpm-lock.yaml if package.json
+      # contains dependencies that aren't currently represented
+      # in the lockfile.
       # ============================================================
       - name: Synchronize pnpm lockfile
         run: |
           pnpm install --no-frozen-lockfile
 
       # ============================================================
-      # 7. Commit the regenerated lockfile back to the repository.
-      #
-      #    If the lockfile was already correct, nothing is committed.
+      # 6. Commit updated lockfile if necessary
       # ============================================================
       - name: Commit updated lockfile
         run: |
           if git diff --quiet -- pnpm-lock.yaml; then
             echo "pnpm-lock.yaml is already synchronized."
           else
-            echo "pnpm-lock.yaml was updated. Committing it..."
+            echo "pnpm-lock.yaml was updated."
 
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
             git add pnpm-lock.yaml
             git commit -m "chore: synchronize pnpm lockfile"
-
             git push
           fi
 
       # ============================================================
-      # 8. SECOND PASS:
-      #    CLEAN / FROZEN INSTALL
+      # 7. CLEAN FROZEN INSTALL
       #
-      #    This is the important verification step.
-      #    If package.json and pnpm-lock.yaml disagree, this FAILS.
+      # This verifies that package.json and pnpm-lock.yaml now
+      # agree exactly.
       # ============================================================
       - name: Clean frozen dependency install
         run: |
           pnpm install --frozen-lockfile
 
       # ============================================================
-      # 9. Check Expo
+      # 8. Check Expo
       # ============================================================
       - name: Check Expo
         working-directory: artifacts/goosebumps-comedy-cyoa-mobile
@@ -124,7 +108,11 @@ jobs:
           pnpm exec expo --version
 
       # ============================================================
-      # 10. Generate Android native project
+      # 9. Generate Android native project
+      #
+      # IMPORTANT:
+      # Java/Gradle setup happens AFTER this because this step
+      # creates the Android/Gradle project.
       # ============================================================
       - name: Generate Android native project
         working-directory: artifacts/goosebumps-comedy-cyoa-mobile
@@ -132,7 +120,39 @@ jobs:
           pnpm exec expo prebuild --platform android --no-install
 
       # ============================================================
-      # 11. Make Gradle executable
+      # 10. Verify Android project exists
+      # ============================================================
+      - name: Verify Android project
+        working-directory: artifacts/goosebumps-comedy-cyoa-mobile
+        run: |
+          echo "Android project contents:"
+          ls -la android
+
+          echo
+          echo "Gradle wrapper:"
+          ls -la android/gradlew
+
+      # ============================================================
+      # 11. Setup Java
+      #
+      # NOW the Gradle project exists, so Gradle caching can work.
+      # ============================================================
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # ============================================================
+      # 12. Verify Java
+      # ============================================================
+      - name: Verify Java
+        run: |
+          java -version
+
+      # ============================================================
+      # 13. Make Gradle executable
       # ============================================================
       - name: Make Gradle executable
         working-directory: artifacts/goosebumps-comedy-cyoa-mobile/android
@@ -140,7 +160,7 @@ jobs:
           chmod +x gradlew
 
       # ============================================================
-      # 12. Build release APK
+      # 14. Build release APK
       # ============================================================
       - name: Build release APK
         working-directory: artifacts/goosebumps-comedy-cyoa-mobile/android
@@ -148,18 +168,19 @@ jobs:
           ./gradlew assembleRelease --no-daemon
 
       # ============================================================
-      # 13. Locate APK
+      # 15. Locate APK
       # ============================================================
       - name: Locate APK
         run: |
           echo "Searching for generated APK..."
+
           find artifacts/goosebumps-comedy-cyoa-mobile/android/app/build/outputs/apk \
             -type f \
             -name "*.apk" \
             -print
 
       # ============================================================
-      # 14. Upload APK as GitHub Actions artifact
+      # 16. Upload APK
       # ============================================================
       - name: Upload APK
         uses: actions/upload-artifact@v4
