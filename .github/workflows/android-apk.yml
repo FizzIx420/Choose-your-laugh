@@ -182,10 +182,12 @@ jobs:
       # ============================================================
       # 16. Upload APK
       # ============================================================
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Publish Upload APK as a recovery ZIP
+        if: success() && github.event_name != 'pull_request'
+        uses: ./.github/actions/publish-release-zip
         with:
-          name: choose-your-laugh-android-apk
-          path: artifacts/goosebumps-comedy-cyoa-mobile/android/app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-          retention-days: 30
+          token: ${{ github.token }}
+          mode: final
+          asset-name: upload-apk-build.zip
+          paths: |
+            artifacts/goosebumps-comedy-cyoa-mobile/android/app/build/outputs/apk/release/*.apk
