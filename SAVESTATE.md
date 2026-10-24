@@ -18,3 +18,9 @@
 
 - Added `.github/workflows/release-zip-policy-check.yml`, a read-only guard that checks build-output workflows use the local release ZIP publisher and any temporary Actions artifact uploads set one-day retention.
 - The guard does not publish or delete artifacts; it will run automatically on the next push/PR. Runtime verification is pending.
+
+## 2026-10-24: Enforce release ZIP-only build delivery
+
+- Updated the local publisher so intermediate handoffs live in draft `ci-*` releases and only a successful final ZIP publishes the release. Rolling retention counts only published successful CI releases and keeps the newest three.
+- Updated `.github/workflows/release-zip-policy-check.yml` to reject all `actions/upload-artifact` use and require the local release ZIP publisher for build outputs.
+- Draft handoffs are cleaned by the account-level cleanup workflow if a build never reaches final publication. Verification pending workflow runs.
